@@ -1,0 +1,1870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CyberShield — Network Intrusion Detection Visualizer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+  <style>
+    /* ═══════════════════════════════════════════════════
+       CYBERSHIELD — Threat Operations Center
+       ═══════════════════════════════════════════════════ */
+    :root {
+      --bg-void: #050610;
+      --bg-deep: #0a0c1a;
+      --bg-panel: #11142e;
+      --bg-panel-hi: #181d40;
+      --border: #1f244a;
+      --border-hi: #2a3170;
+      --cyan: #00e5ff;
+      --cyan-dim: #00b8d4;
+      --amber: #ffab00;
+      --amber-dim: #c98a00;
+      --red: #ff1744;
+      --red-dim: #c4001a;
+      --green: #00e676;
+      --violet: #b388ff;
+      --text: #e7eaff;
+      --text-dim: #8a92c2;
+      --text-faint: #555a85;
+      --mono: 'JetBrains Mono', 'Consolas', monospace;
+      --display: 'Orbitron', sans-serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body {
+      background:
+        radial-gradient(circle at 15% 15%, rgba(0,229,255,0.07), transparent 45%),
+        radial-gradient(circle at 85% 85%, rgba(255,23,68,0.06), transparent 45%),
+        var(--bg-void);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      pointer-events: none; z-index: 1;
+      background-image: radial-gradient(rgba(0,229,255,0.06) 1px, transparent 1px);
+      background-size: 26px 26px;
+    }
+    body::after {
+      content: ''; position: fixed; inset: 0;
+      pointer-events: none; z-index: 2;
+      background: repeating-linear-gradient(0deg, transparent, transparent 3px,
+        rgba(0,229,255,0.018) 3px, rgba(0,229,255,0.018) 4px);
+    }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg-deep); }
+    ::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--cyan-dim); }
+
+    #app {
+      position: relative; z-index: 3;
+      display: grid;
+      grid-template-columns: 280px 1fr 360px;
+      grid-template-rows: 56px 1fr 32px;
+      height: 100vh;
+      gap: 1px;
+      background: var(--border);
+    }
+    header {
+      grid-column: 1 / -1;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 20px;
+      background: linear-gradient(180deg, var(--bg-panel) 0%, var(--bg-deep) 100%);
+      border-bottom: 1px solid var(--border);
+    }
+    .brand { display: flex; align-items: center; gap: 14px; }
+    .brand-logo {
+      width: 36px; height: 36px;
+      display: grid; place-items: center;
+      background: radial-gradient(circle, rgba(255,23,68,0.18), transparent 70%);
+      border: 1px solid var(--red);
+      border-radius: 8px;
+      box-shadow: 0 0 18px rgba(255,23,68,0.35), inset 0 0 12px rgba(255,23,68,0.15);
+      animation: shield-pulse 2.5s ease-in-out infinite;
+    }
+    @keyframes shield-pulse {
+      0%, 100% { box-shadow: 0 0 18px rgba(255,23,68,0.35), inset 0 0 12px rgba(255,23,68,0.15); }
+      50% { box-shadow: 0 0 28px rgba(255,23,68,0.55), inset 0 0 18px rgba(255,23,68,0.3); }
+    }
+    .brand-name {
+      font-family: var(--display);
+      font-weight: 900;
+      font-size: 20px;
+      letter-spacing: 4px;
+      background: linear-gradient(90deg, var(--cyan), var(--red));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .brand-tag {
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .header-status { display: flex; align-items: center; gap: 14px; }
+    .status-pill {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 12px;
+      background: rgba(0,229,255,0.06);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      animation: dot-pulse 1.4s ease-in-out infinite;
+    }
+    .status-dot.amber { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+    .status-dot.red { background: var(--red); box-shadow: 0 0 8px var(--red); }
+    @keyframes dot-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
+
+    .header-btn {
+      padding: 8px 14px;
+      background: transparent;
+      border: 1px solid var(--border-hi);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all .2s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .header-btn:hover {
+      border-color: var(--cyan);
+      color: var(--cyan);
+      background: rgba(0,229,255,0.05);
+      box-shadow: 0 0 12px rgba(0,229,255,0.3);
+    }
+
+    /* ═════════ PANELS ═════════ */
+    .panel { background: var(--bg-deep); overflow-y: auto; padding: 18px; }
+    .panel-section { margin-bottom: 22px; }
+    .panel-title {
+      font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--cyan);
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 12px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .panel-title::before { content: '◆'; color: var(--amber); }
+    .panel-title.red { color: var(--red); }
+    .panel-title.red::before { color: var(--red); }
+
+    /* Attack buttons */
+    .attack-btn {
+      display: flex; align-items: center; gap: 12px;
+      width: 100%;
+      padding: 12px 14px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      color: var(--text);
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all .2s;
+      margin-bottom: 8px;
+      text-align: left;
+    }
+    .attack-btn:hover {
+      border-color: var(--border-hi);
+      background: var(--bg-panel-hi);
+    }
+    .attack-btn.active {
+      border-color: var(--red);
+      background: rgba(255,23,68,0.08);
+      box-shadow: 0 0 14px rgba(255,23,68,0.25), inset 0 0 12px rgba(255,23,68,0.05);
+    }
+    .attack-btn.active .attack-icon { background: rgba(255,23,68,0.2); border-color: var(--red); color: var(--red); }
+    .attack-btn[data-attack="normal"].active { border-color: var(--green); background: rgba(0,230,118,0.08); box-shadow: 0 0 14px rgba(0,230,118,0.25); }
+    .attack-btn[data-attack="normal"].active .attack-icon { background: rgba(0,230,118,0.2); border-color: var(--green); color: var(--green); }
+    .attack-icon {
+      width: 36px; height: 36px; border-radius: 4px;
+      background: rgba(0,229,255,0.08);
+      border: 1px solid var(--border-hi);
+      color: var(--cyan);
+      display: grid; place-items: center;
+      flex-shrink: 0;
+      transition: all .2s;
+    }
+    .attack-icon svg { width: 18px; height: 18px; stroke: currentColor; }
+    .attack-meta { flex: 1; min-width: 0; }
+    .attack-name {
+      font-family: var(--display);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      margin-bottom: 2px;
+    }
+    .attack-desc {
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 0.5px;
+      line-height: 1.4;
+    }
+
+    /* Sliders */
+    .slider-row {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 6px; font-size: 11px;
+    }
+    .slider-row .label { color: var(--text-dim); }
+    .slider-row .value { color: var(--amber); font-weight: 500; }
+    input[type="range"] {
+      -webkit-appearance: none; appearance: none;
+      width: 100%; height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      outline: none;
+      margin-bottom: 14px;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 14px; height: 14px;
+      background: var(--cyan);
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 0 8px var(--cyan);
+      border: 2px solid var(--bg-void);
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 14px; height: 14px;
+      background: var(--cyan);
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 0 8px var(--cyan);
+      border: 2px solid var(--bg-void);
+    }
+
+    .btn {
+      width: 100%;
+      padding: 10px;
+      background: transparent;
+      border: 1px solid var(--border-hi);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all .2s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      margin-bottom: 6px;
+    }
+    .btn:hover {
+      border-color: var(--cyan);
+      color: var(--cyan);
+      background: rgba(0,229,255,0.05);
+      box-shadow: 0 0 12px rgba(0,229,255,0.25);
+    }
+    .btn svg { width: 14px; height: 14px; stroke: currentColor; }
+    .btn-amber { border-color: var(--amber); color: var(--amber); }
+    .btn-amber:hover { background: rgba(255,171,0,0.08); box-shadow: 0 0 12px rgba(255,171,0,0.3); color: var(--amber); }
+    .btn-danger { border-color: var(--red); color: var(--red); }
+    .btn-danger:hover { background: rgba(255,23,68,0.08); box-shadow: 0 0 12px rgba(255,23,68,0.3); color: var(--red); }
+
+    /* ═════════ STAGE ═════════ */
+    .stage {
+      background: var(--bg-void);
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .canvas-wrap {
+      position: relative;
+      border: 1px solid var(--border-hi);
+      border-radius: 6px;
+      box-shadow: 0 0 40px rgba(0,229,255,0.12), inset 0 0 30px rgba(0,229,255,0.04);
+      background: var(--bg-deep);
+      width: 90%; max-width: 920px;
+      aspect-ratio: 16/10;
+    }
+    .canvas-corner {
+      position: absolute;
+      width: 14px; height: 14px;
+      border: 2px solid var(--cyan);
+      pointer-events: none;
+    }
+    .canvas-corner.tl { top: -1px; left: -1px; border-right: none; border-bottom: none; }
+    .canvas-corner.tr { top: -1px; right: -1px; border-left: none; border-bottom: none; }
+    .canvas-corner.bl { bottom: -1px; left: -1px; border-right: none; border-top: none; }
+    .canvas-corner.br { bottom: -1px; right: -1px; border-left: none; border-top: none; }
+    canvas { display: block; width: 100%; height: 100%; border-radius: 5px; }
+
+    .stage-overlay {
+      position: absolute;
+      top: 18px; left: 18px;
+      display: flex; flex-direction: column; gap: 6px;
+      pointer-events: none;
+    }
+    .overlay-pill {
+      background: rgba(10,12,26,0.85);
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 3px;
+      font-size: 10px;
+      letter-spacing: 1px;
+      color: var(--text-dim);
+      backdrop-filter: blur(4px);
+    }
+    .overlay-pill .v { color: var(--cyan); }
+    .overlay-pill .vr { color: var(--red); }
+    .overlay-pill .va { color: var(--amber); }
+    .overlay-pill .vg { color: var(--green); }
+
+    .stage-legend {
+      position: absolute;
+      bottom: 18px; left: 18px;
+      display: flex; flex-wrap: wrap; gap: 6px;
+      pointer-events: none;
+      max-width: 60%;
+    }
+    .legend-item {
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(10,12,26,0.85);
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 3px;
+      font-size: 10px;
+      letter-spacing: 1px;
+      color: var(--text-dim);
+      backdrop-filter: blur(4px);
+    }
+    .legend-swatch { width: 10px; height: 10px; border-radius: 2px; }
+
+    /* Health ring overlay */
+    .health-ring {
+      position: absolute;
+      top: 18px; right: 18px;
+      width: 84px; height: 84px;
+      pointer-events: none;
+    }
+
+    /* ═════════ RIGHT PANEL ═════════ */
+    .chart-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+    }
+    .chart-title {
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      display: flex; justify-content: space-between;
+    }
+    .chart-title .v { color: var(--cyan); font-weight: 500; }
+
+    .alert-feed {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      max-height: 240px;
+      overflow-y: auto;
+      padding: 8px;
+    }
+    .alert-feed.empty {
+      padding: 20px;
+      text-align: center;
+      color: var(--text-faint);
+      font-style: italic;
+      font-size: 11px;
+    }
+    .alert {
+      padding: 8px 10px;
+      margin-bottom: 4px;
+      background: var(--bg-deep);
+      border-left: 2px solid var(--cyan);
+      border-radius: 3px;
+      font-size: 11px;
+      animation: alert-in .3s ease;
+    }
+    @keyframes alert-in {
+      from { transform: translateX(8px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    .alert.warning { border-left-color: var(--amber); }
+    .alert.critical { border-left-color: var(--red); background: rgba(255,23,68,0.05); }
+    .alert-head {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 3px;
+    }
+    .alert-type {
+      font-family: var(--display);
+      font-size: 10px;
+      letter-spacing: 1px;
+      color: var(--cyan);
+    }
+    .alert.warning .alert-type { color: var(--amber); }
+    .alert.critical .alert-type { color: var(--red); }
+    .alert-time { font-size: 9px; color: var(--text-faint); }
+    .alert-msg { color: var(--text-dim); font-size: 10.5px; line-height: 1.4; }
+    .alert-msg .node { color: var(--text); font-weight: 500; }
+
+    .analyst-card {
+      background: linear-gradient(135deg, rgba(0,229,255,0.05), rgba(255,23,68,0.03));
+      border: 1px solid var(--border-hi);
+      border-radius: 4px;
+      padding: 12px;
+      font-size: 11px;
+      line-height: 1.6;
+      color: var(--text);
+      min-height: 80px;
+      position: relative;
+      overflow: hidden;
+    }
+    .analyst-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 100%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(0,229,255,0.06), transparent);
+      animation: scan 4s linear infinite;
+    }
+    @keyframes scan { to { left: 100%; } }
+    .analyst-card .empty { color: var(--text-faint); font-style: italic; }
+    .analyst-card strong { color: var(--cyan); }
+    .analyst-card em { color: var(--amber); font-style: normal; }
+    .analyst-card .verdict {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+    .analyst-card .verdict .crit { color: var(--red); font-weight: 700; }
+    .analyst-card .verdict .ok { color: var(--green); font-weight: 700; }
+
+    /* Health bar */
+    .health-bar {
+      height: 8px;
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      position: relative;
+    }
+    .health-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--red), var(--amber), var(--green));
+      transition: width .6s ease;
+    }
+    .health-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 6px;
+    }
+    .health-name {
+      font-family: var(--display);
+      font-size: 12px;
+      letter-spacing: 1px;
+      color: var(--text);
+    }
+    .health-value {
+      font-family: var(--display);
+      font-size: 16px;
+      font-weight: 900;
+      color: var(--green);
+    }
+    .health-value.warning { color: var(--amber); }
+    .health-value.critical { color: var(--red); }
+
+    /* ═════════ FOOTER ═════════ */
+    footer {
+      grid-column: 1 / -1;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 16px;
+      background: var(--bg-panel);
+      border-top: 1px solid var(--border);
+      font-size: 10px;
+      color: var(--text-faint);
+      letter-spacing: 1px;
+    }
+    footer .footer-stats { display: flex; gap: 16px; }
+    footer .footer-stats span { color: var(--text-dim); }
+
+    /* ═════════ MODAL ═════════ */
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(5,6,16,0.85);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      display: none;
+      align-items: center; justify-content: center;
+      padding: 30px;
+    }
+    .modal-backdrop.active { display: flex; }
+    .modal {
+      background: var(--bg-deep);
+      border: 1px solid var(--cyan);
+      border-radius: 8px;
+      width: 100%; max-width: 860px;
+      max-height: 90vh;
+      overflow: hidden;
+      display: flex; flex-direction: column;
+      box-shadow: 0 0 60px rgba(0,229,255,0.3), 0 20px 60px rgba(0,0,0,0.6);
+      animation: modal-in .4s cubic-bezier(.2,.9,.3,1);
+    }
+    @keyframes modal-in {
+      from { transform: translateY(20px) scale(.96); opacity: 0; }
+      to { transform: translateY(0) scale(1); opacity: 1; }
+    }
+    .modal-header {
+      padding: 18px 24px;
+      background: linear-gradient(90deg, rgba(255,23,68,0.1), transparent);
+      border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .modal-title {
+      font-family: var(--display);
+      font-weight: 900;
+      font-size: 20px;
+      letter-spacing: 3px;
+      background: linear-gradient(90deg, var(--cyan), var(--red));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .modal-close {
+      background: transparent;
+      border: 1px solid var(--border-hi);
+      color: var(--text);
+      width: 32px; height: 32px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: grid; place-items: center;
+      transition: all .2s;
+    }
+    .modal-close:hover { border-color: var(--red); color: var(--red); }
+    .modal-body {
+      padding: 24px;
+      overflow-y: auto;
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--text);
+    }
+    .modal-body h3 {
+      font-family: var(--display);
+      color: var(--cyan);
+      font-size: 14px;
+      letter-spacing: 2px;
+      margin: 20px 0 10px;
+      text-transform: uppercase;
+    }
+    .modal-body h3:first-child { margin-top: 0; }
+    .modal-body p { color: var(--text-dim); margin-bottom: 10px; }
+    .modal-body p strong { color: var(--text); font-weight: 500; }
+    .modal-body p em { color: var(--amber); font-style: normal; }
+    .modal-body code {
+      background: var(--bg-panel);
+      padding: 2px 6px;
+      border-radius: 3px;
+      color: var(--cyan);
+      font-size: 12px;
+      border: 1px solid var(--border);
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .info-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-left: 2px solid var(--cyan);
+      padding: 12px 14px;
+      border-radius: 4px;
+    }
+    .info-card.amber { border-left-color: var(--amber); }
+    .info-card.red { border-left-color: var(--red); }
+    .info-card.green { border-left-color: var(--green); }
+    .info-card h4 {
+      font-family: var(--display);
+      font-size: 12px;
+      color: var(--cyan);
+      margin-bottom: 6px;
+      letter-spacing: 1.5px;
+    }
+    .info-card.amber h4 { color: var(--amber); }
+    .info-card.red h4 { color: var(--red); }
+    .info-card.green h4 { color: var(--green); }
+    .info-card p {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin: 0;
+      line-height: 1.6;
+    }
+
+    /* ═════════ INTRO ═════════ */
+    .intro {
+      position: fixed; inset: 0; z-index: 200;
+      background: var(--bg-void);
+      display: grid; place-items: center;
+      transition: opacity .8s ease;
+    }
+    .intro.fade { opacity: 0; pointer-events: none; }
+    .intro-content {
+      text-align: center;
+      animation: intro-rise .8s cubic-bezier(.2,.9,.3,1);
+    }
+    @keyframes intro-rise {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .intro-logo {
+      font-family: var(--display);
+      font-size: 64px;
+      font-weight: 900;
+      letter-spacing: 10px;
+      background: linear-gradient(90deg, var(--cyan), var(--red), var(--cyan));
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: shimmer 3s linear infinite;
+      margin-bottom: 12px;
+    }
+    @keyframes shimmer { to { background-position: 200% center; } }
+    .intro-sub {
+      font-size: 14px;
+      letter-spacing: 6px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-bottom: 32px;
+    }
+    .intro-loader {
+      width: 280px; height: 2px;
+      background: var(--border);
+      margin: 0 auto;
+      border-radius: 1px;
+      overflow: hidden;
+      position: relative;
+    }
+    .intro-loader::after {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 50%; height: 100%;
+      background: linear-gradient(90deg, transparent, var(--red), transparent);
+      animation: loader 1.4s linear infinite;
+    }
+    @keyframes loader { to { left: 200%; } }
+    .intro-text {
+      font-size: 11px;
+      color: var(--text-faint);
+      margin-top: 16px;
+      letter-spacing: 2px;
+    }
+
+    .toast-wrap {
+      position: fixed;
+      top: 70px; right: 20px;
+      z-index: 50;
+      display: flex; flex-direction: column; gap: 8px;
+      pointer-events: none;
+    }
+    .toast {
+      background: var(--bg-panel);
+      border: 1px solid var(--cyan);
+      padding: 10px 16px;
+      border-radius: 4px;
+      font-size: 11px;
+      letter-spacing: 1px;
+      color: var(--text);
+      box-shadow: 0 0 16px rgba(0,229,255,0.25);
+      animation: toast-in .3s ease, toast-out .3s ease 2.7s forwards;
+      max-width: 320px;
+    }
+    .toast.amber { border-color: var(--amber); box-shadow: 0 0 16px rgba(255,171,0,0.25); }
+    .toast.red { border-color: var(--red); box-shadow: 0 0 16px rgba(255,23,68,0.25); }
+    @keyframes toast-in { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes toast-out { to { transform: translateX(20px); opacity: 0; } }
+
+    @media (max-width: 1100px) {
+      #app { grid-template-columns: 240px 1fr 300px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- INTRO SPLASH -->
+  <div class="intro" id="intro">
+    <div class="intro-content">
+      <div class="intro-logo">CYBERSHIELD</div>
+      <div class="intro-sub">Threat Operations Center</div>
+      <div class="intro-loader"></div>
+      <div class="intro-text">CONNECTING TO NETWORK · ARMING IDS · LOADING SIGNATURES</div>
+    </div>
+  </div>
+
+  <!-- TOAST AREA -->
+  <div class="toast-wrap" id="toasts"></div>
+
+  <!-- MAIN APP -->
+  <div id="app">
+    <header>
+      <div class="brand">
+        <div class="brand-logo">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff5470" stroke-width="2">
+            <path d="M12 2L3 6v6c0 5.5 3.84 10.74 9 12 5.16-1.26 9-6.5 9-12V6l-9-4z"/>
+            <path d="M9 12l2 2 4-4"/>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-name">CYBERSHIELD</div>
+          <div class="brand-tag">IDS · Threat Operations</div>
+        </div>
+      </div>
+      <div class="header-status">
+        <div class="status-pill"><span class="status-dot" id="netDot"></span><span>NETWORK <span id="netStatus" style="color:var(--green)">SECURE</span></span></div>
+        <div class="status-pill"><span>ATTACK <span id="attackMode" style="color:var(--green)">NORMAL</span></span></div>
+        <div class="status-pill"><span>UPTIME <span id="uptime" style="color:var(--cyan)">00:00</span></span></div>
+        <button class="header-btn" id="infoBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          About / How to Use
+        </button>
+      </div>
+    </header>
+
+    <!-- LEFT PANEL -->
+    <aside class="panel">
+      <div class="panel-section">
+        <div class="panel-title red">Attack Console</div>
+        <button class="attack-btn active" data-attack="normal">
+          <div class="attack-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg></div>
+          <div class="attack-meta">
+            <div class="attack-name" style="color:var(--green)">NORMAL</div>
+            <div class="attack-desc">Baseline traffic, no threats</div>
+          </div>
+        </button>
+        <button class="attack-btn" data-attack="ddos">
+          <div class="attack-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+          <div class="attack-meta">
+            <div class="attack-name">DDoS FLOOD</div>
+            <div class="attack-desc">Mass packet flood → Web server</div>
+          </div>
+        </button>
+        <button class="attack-btn" data-attack="portscan">
+          <div class="attack-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+          <div class="attack-meta">
+            <div class="attack-name">PORT SCAN</div>
+            <div class="attack-desc">Sequential port enumeration</div>
+          </div>
+        </button>
+        <button class="attack-btn" data-attack="mitm">
+          <div class="attack-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12h6"/><path d="M12 9v6"/><circle cx="12" cy="12" r="10"/></svg></div>
+          <div class="attack-meta">
+            <div class="attack-name">MAN-IN-MIDDLE</div>
+            <div class="attack-desc">Hijack traffic via attacker</div>
+          </div>
+        </button>
+        <button class="attack-btn" data-attack="bruteforce">
+          <div class="attack-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+          <div class="attack-meta">
+            <div class="attack-name">SSH BRUTE-FORCE</div>
+            <div class="attack-desc">Repeated SSH auth attempts</div>
+          </div>
+        </button>
+        <button class="attack-btn" data-attack="exfil">
+          <div class="attack-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+          <div class="attack-meta">
+            <div class="attack-name">DATA EXFIL</div>
+            <div class="attack-desc">Large outbound DB transfer</div>
+          </div>
+        </button>
+        <button class="attack-btn" data-attack="ransomware">
+          <div class="attack-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1"/></svg></div>
+          <div class="attack-meta">
+            <div class="attack-name">RANSOMWARE</div>
+            <div class="attack-desc">Lateral spread: WS→WS→Server</div>
+          </div>
+        </button>
+        <button class="attack-btn" data-attack="sqli">
+          <div class="attack-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg></div>
+          <div class="attack-meta">
+            <div class="attack-name">SQL INJECTION</div>
+            <div class="attack-desc">Malicious queries → DB server</div>
+          </div>
+        </button>
+        <button class="attack-btn" data-attack="dnstunnel">
+          <div class="attack-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+          <div class="attack-meta">
+            <div class="attack-name">DNS TUNNEL</div>
+            <div class="attack-desc">Covert data channel via DNS</div>
+          </div>
+        </button>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-title">Simulation Controls</div>
+        <div class="slider-row"><span class="label">Traffic Rate</span><span class="value" id="rateVal">5</span></div>
+        <input type="range" id="rate" min="1" max="10" value="5">
+        <div class="slider-row"><span class="label">Detection Threshold</span><span class="value" id="threshVal">18</span></div>
+        <input type="range" id="thresh" min="5" max="40" value="18">
+        <button class="btn" id="pauseBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+          Pause
+        </button>
+        <button class="btn btn-amber" id="analystBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Run Threat Analysis
+        </button>
+        <button class="btn btn-danger" id="clearBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg>
+          Clear Alerts
+        </button>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-title">Network Health</div>
+        <div class="health-header">
+          <div class="health-name">SCORE</div>
+          <div class="health-value" id="healthVal">100</div>
+        </div>
+        <div class="health-bar"><div class="health-bar-fill" id="healthBar" style="width:100%"></div></div>
+        <div style="font-size:10px;color:var(--text-faint);margin-top:6px;letter-spacing:1px;">DECAYS ON CRITICAL · REGENERATES IN NORMAL</div>
+      </div>
+    </aside>
+
+    <!-- CENTER STAGE -->
+    <main class="stage">
+      <div class="canvas-wrap">
+        <div class="canvas-corner tl"></div>
+        <div class="canvas-corner tr"></div>
+        <div class="canvas-corner bl"></div>
+        <div class="canvas-corner br"></div>
+        <canvas id="net" width="1280" height="800"></canvas>
+        <div class="stage-overlay">
+          <div class="overlay-pill">NODES <span class="v" id="nodeCount">10</span></div>
+          <div class="overlay-pill">PACKETS/S <span class="va" id="pktRate">0</span></div>
+          <div class="overlay-pill">ALERTS <span class="vr" id="alertCount">0</span></div>
+          <div class="overlay-pill">CRITICAL <span class="vr" id="critCount">0</span></div>
+        </div>
+        <div class="stage-legend">
+          <div class="legend-item"><span class="legend-swatch" style="background:#00e5ff"></span>HTTP</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#00e676"></span>HTTPS</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#b388ff"></span>DNS</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#ffab00"></span>SSH</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#ff80ab"></span>SQL</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#ff1744"></span>MALICIOUS</div>
+        </div>
+      </div>
+    </main>
+
+    <!-- RIGHT PANEL -->
+    <aside class="panel">
+      <div class="panel-section">
+        <div class="panel-title">Live Telemetry</div>
+        <div class="chart-card">
+          <div class="chart-title"><span>PACKETS / TICK</span><span class="v" id="pktNow">0</span></div>
+          <canvas id="pktChart" width="320" height="80"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title"><span>ALERTS BY TYPE</span><span class="v" id="alertSummary">—</span></div>
+          <canvas id="alertChart" width="320" height="80"></canvas>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-title">Alert Feed</div>
+        <div class="alert-feed empty" id="alertFeed">
+          <div>No alerts yet · IDS armed and watching</div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-title">Threat Analyst</div>
+        <div class="analyst-card" id="analyst">
+          <div class="empty">Trigger an attack to populate live telemetry, or click <em>Run Threat Analysis</em> for an automated explanation of current network state.</div>
+        </div>
+      </div>
+    </aside>
+
+    <footer>
+      <div>CYBERSHIELD v3.0 · BUILT BY NISHANTH · UMD CPSE '26</div>
+      <div class="footer-stats">
+        <span>FPS: <span id="fps">—</span></span>
+        <span>STATE: <span id="state" style="color:var(--green)">MONITORING</span></span>
+        <span>SHORTCUT: <span style="color:var(--amber)">1-9</span> attacks · <span style="color:var(--amber)">SPACE</span> pause</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- INFO MODAL -->
+  <div class="modal-backdrop" id="infoModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">CYBERSHIELD — Operational Briefing</div>
+        <button class="modal-close" id="modalClose">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <h3>What is CyberShield?</h3>
+        <p>CyberShield is a <strong>live network intrusion detection visualizer</strong>. It simulates a small corporate network — gateway, firewall, router, servers, and workstations — with animated packet flows between them. You play the role of an <em>attacker</em>, launching real attack patterns: DDoS floods, port scans, MITM hijacks, SSH brute-force attempts, and data exfiltration. The built-in IDS detects them in real time, raises classified alerts, and a built-in analyst explains <em>why</em> each alert fired.</p>
+
+        <div class="info-grid">
+          <div class="info-card red">
+            <h4>DDoS Flood</h4>
+            <p>Mass packet burst toward the web server. Caught by <em>rate-based detection</em> — packets-per-second crossing the threshold trigger escalating severity.</p>
+          </div>
+          <div class="info-card amber">
+            <h4>Port Scan</h4>
+            <p>Sequential probing of TCP ports. Caught by <em>sequential pattern detection</em> in a sliding window of recent destination ports.</p>
+          </div>
+          <div class="info-card">
+            <h4>MITM Hijack</h4>
+            <p>Traffic rerouted through an attacker node. Caught by <em>routing anomaly detection</em> — packets traversing unexpected hops.</p>
+          </div>
+          <div class="info-card green">
+            <h4>Brute Force</h4>
+            <p>Repeated SSH auth attempts on one workstation. Caught by <em>protocol concentration analysis</em> on port 22.</p>
+          </div>
+          <div class="info-card amber">
+            <h4>Data Exfil</h4>
+            <p>Anomalously large outbound transfers from the DB server. Caught by <em>egress volume analysis</em>.</p>
+          </div>
+          <div class="info-card red">
+            <h4>Ransomware</h4>
+            <p>Lateral spread between workstations/servers mimicking WannaCry. Caught by <em>internal lateral movement pattern detection</em>.</p>
+          </div>
+          <div class="info-card">
+            <h4>SQL Injection</h4>
+            <p>Malicious queries targeting DB port 3306 from external sources. Caught by <em>protocol-specific query rate analysis</em>.</p>
+          </div>
+          <div class="info-card amber">
+            <h4>DNS Tunneling</h4>
+            <p>Covert data channel via oversized DNS packets. Caught by <em>DNS payload size and frequency anomaly detection</em>.</p>
+          </div>
+          <div class="info-card green">
+            <h4>Health Score</h4>
+            <p>Starts at 100. Critical alerts drop it by 5, warnings by 1. Regenerates +0.4/tick in normal mode. Visualizes overall security posture.</p>
+          </div>
+        </div>
+
+        <h3>How To Use</h3>
+        <p><strong>1.</strong> Watch the network — packets stream between nodes color-coded by protocol (HTTP cyan, HTTPS green, DNS violet, SSH amber, SQL pink).</p>
+        <p><strong>2.</strong> Click an attack button (left panel). The attacker node animates in and floods the network with malicious traffic.</p>
+        <p><strong>3.</strong> Watch the <em>alert feed</em> populate as the IDS detects the attack — color-coded by severity (info/warning/critical).</p>
+        <p><strong>4.</strong> Hit <em>Run Threat Analysis</em> for an automated written explanation of the current network state, top threat sources, and recommended mitigations.</p>
+        <p><strong>5.</strong> Switch back to <em>NORMAL</em> mode and watch the health score regenerate.</p>
+
+        <h3>Detection Algorithms (Implemented From Scratch)</h3>
+        <p><strong>Rate-based:</strong> Sliding 2.5s window counts packets per node. Severity scales with how far above threshold the rate climbs (1.5× = warning, 3× = critical).</p>
+        <p><strong>Sequential port:</strong> Ring buffer of last 20 destination ports per node. Slides a window of 5 looking for ascending consecutive values.</p>
+        <p><strong>Routing anomaly:</strong> Each packet carries an <em>expected</em> path. If actual path traverses an unexpected node (the attacker), it's flagged critical.</p>
+        <p><strong>Protocol concentration:</strong> If &gt;70% of recent packets to a node are the same protocol/port, that's suspicious (brute-force signature).</p>
+        <p><strong>Egress volume:</strong> Tracks bytes-per-tick leaving each node. Anomalous spikes from internal nodes = data exfiltration indicator.</p>
+        <p><strong>Deduplication:</strong> Same (alert-type, node) pair is suppressed for 2 seconds after firing — prevents alert fatigue during sustained attacks.</p>
+        <p><strong>Lateral movement:</strong> Tracks internal-to-internal malicious traffic patterns. Multiple payloads arriving at the same host from internal sources triggers ransomware alerts.</p>
+        <p><strong>SQL injection:</strong> Monitors port 3306 query concentration from external sources. Rapid sequential queries trigger critical alerts.</p>
+        <p><strong>DNS tunneling:</strong> Tracks DNS payload volume and frequency. Abnormally large DNS packets and high query rates indicate covert data channels.</p>
+
+        <h3>Why This Project?</h3>
+        <p>Intrusion detection is <em>everywhere</em> in modern security — every firewall, every cloud workload, every SOC dashboard runs algorithms exactly like these. CyberShield turns a normally invisible, log-only discipline into something you can <em>watch happen</em>. Trigger a DDoS, see packets pile up, watch the alert feed fire, see the health bar drop — the entire detection loop, visually, in one screen.</p>
+
+        <h3>Keyboard Shortcuts</h3>
+        <p><code>1-9</code> — Attack modes (Normal, DDoS, Port Scan, MITM, Brute-force, Exfil, Ransomware, SQLi, DNS Tunnel) · <code>Space</code> — Pause · <code>A</code> — Analyst · <code>C</code> — Clear alerts · <code>I</code> — This dialog · <code>Esc</code> — Close</p>
+
+        <h3>Tech Stack</h3>
+        <p><strong>Zero dependencies.</strong> Pure HTML5 Canvas, vanilla JavaScript, hand-tuned CSS. All eight IDS detection algorithms, traffic simulation, packet routing, charts, and animations implemented from scratch. No build step, no CDN React, no Babel. Open the file → it runs.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  /* ═══════════════════════════════════════════════════
+     CYBERSHIELD ENGINE — Vanilla JS, Zero Dependencies
+     ═══════════════════════════════════════════════════ */
+  (function() {
+    'use strict';
+
+    const canvas = document.getElementById('net');
+    const ctx = canvas.getContext('2d');
+
+    // ───── NETWORK TOPOLOGY ─────
+    // Coordinates in canvas units (canvas is 1280x800)
+    const NODES = [
+      { id: 'inet',   name: 'INTERNET',   type: 'cloud',      x: 100,  y: 400, role: 'edge' },
+      { id: 'fw',     name: 'FIREWALL',   type: 'shield',     x: 280,  y: 400, role: 'security' },
+      { id: 'router', name: 'CORE RTR',   type: 'router',     x: 480,  y: 400, role: 'router' },
+      { id: 'web',    name: 'WEB-01',     type: 'server',     x: 700,  y: 200, role: 'server' },
+      { id: 'db',     name: 'DB-01',      type: 'server',     x: 880,  y: 200, role: 'server' },
+      { id: 'dns',    name: 'DNS-01',     type: 'server',     x: 1080, y: 200, role: 'server' },
+      { id: 'ws1',    name: 'WS-101',     type: 'workstation', x: 700,  y: 600, role: 'client' },
+      { id: 'ws2',    name: 'WS-102',     type: 'workstation', x: 860,  y: 620, role: 'client' },
+      { id: 'ws3',    name: 'WS-103',     type: 'workstation', x: 1020, y: 600, role: 'client' },
+      { id: 'ws4',    name: 'WS-104',     type: 'workstation', x: 1180, y: 580, role: 'client' },
+    ];
+    const ATTACKER = { id: 'atk', name: 'ATTACKER', type: 'skull', x: 100, y: 200, role: 'attacker' };
+
+    // Connectivity: each link defines a bidirectional edge
+    const LINKS = [
+      ['inet','fw'], ['fw','router'],
+      ['router','web'], ['router','db'], ['router','dns'],
+      ['router','ws1'], ['router','ws2'], ['router','ws3'], ['router','ws4'],
+      ['web','db'],
+    ];
+
+    // ───── PROTOCOL COLORS ─────
+    const PROTO = {
+      http:  { color: '#00e5ff', port: 80 },
+      https: { color: '#00e676', port: 443 },
+      dns:   { color: '#b388ff', port: 53 },
+      ssh:   { color: '#ffab00', port: 22 },
+      sql:   { color: '#ff80ab', port: 3306 },
+      mal:   { color: '#ff1744', port: 0 },
+    };
+
+    // ───── STATE ─────
+    const state = {
+      packets: [],
+      attack: 'normal',
+      paused: false,
+      rate: 5,
+      thresh: 18,
+      alerts: [],
+      health: 100,
+      tick: 0,
+      pktHistory: new Array(60).fill(0),
+      alertCounts: { rate: 0, portscan: 0, mitm: 0, brute: 0, exfil: 0, ransomware: 0, sqli: 0, dnstunnel: 0 },
+      pktBuckets: new Map(), // nodeId -> { count, windowStart }
+      portWindow: new Map(), // nodeId -> [ports]
+      egressBuckets: new Map(),
+      protoConcentration: new Map(),
+      dedup: new Map(), // key -> lastFireTime
+      startTime: performance.now(),
+      attackerVisible: false,
+      attackerPulse: 0,
+      nodeAlerts: new Map(), // nodeId -> alert pulse time
+    };
+
+    // ───── PACKET ─────
+    function createPacket(from, to, proto, options = {}) {
+      const path = computePath(from, to, options.via);
+      if (!path || path.length < 2) return null;
+      const p = {
+        id: Math.random().toString(36).slice(2),
+        path, segIdx: 0, segT: 0,
+        proto: proto,
+        port: options.port !== undefined ? options.port : PROTO[proto].port,
+        speed: options.speed || (0.012 + Math.random() * 0.006),
+        size: options.size || (50 + Math.random() * 1400),
+        malicious: !!options.malicious,
+        attackType: options.attackType || null,
+      };
+      state.packets.push(p);
+      return p;
+    }
+
+    // ───── ROUTING ─────
+    const adj = new Map();
+    NODES.forEach(n => adj.set(n.id, []));
+    LINKS.forEach(([a, b]) => { adj.get(a).push(b); adj.get(b).push(a); });
+    function computePath(fromId, toId, via) {
+      // BFS
+      if (via) {
+        const p1 = bfs(fromId, via); const p2 = bfs(via, toId);
+        if (!p1 || !p2) return null;
+        return p1.concat(p2.slice(1));
+      }
+      return bfs(fromId, toId);
+    }
+    function bfs(from, to) {
+      if (from === to) return [from];
+      const q = [from], visited = new Set([from]), parent = new Map();
+      while (q.length) {
+        const cur = q.shift();
+        for (const nb of (adj.get(cur) || [])) {
+          if (visited.has(nb)) continue;
+          visited.add(nb);
+          parent.set(nb, cur);
+          if (nb === to) {
+            const path = [to]; let c = to;
+            while (parent.has(c)) { c = parent.get(c); path.unshift(c); }
+            return path;
+          }
+          q.push(nb);
+        }
+      }
+      return null;
+    }
+    function nodeById(id) {
+      if (id === 'atk') return ATTACKER;
+      return NODES.find(n => n.id === id);
+    }
+
+    // ───── TRAFFIC GENERATION ─────
+    // Probability per tick (~60/s) of spawning a packet — keeps baseline rate ≪ threshold
+    function generateNormalTraffic() {
+      const p = 0.05 + state.rate * 0.025; // 7.5%..30% per tick
+      if (Math.random() < p) {
+        const r = Math.random();
+        if (r < 0.4) {
+          const ws = pick(['ws1','ws2','ws3','ws4']);
+          const proto = pick(['http','https','dns']);
+          const target = proto === 'dns' ? 'dns' : (Math.random() < 0.5 ? 'web' : 'inet');
+          createPacket(ws, target, proto);
+        } else if (r < 0.7) {
+          const ws = pick(['ws1','ws2','ws3','ws4']);
+          createPacket(ws, 'web', 'http');
+          if (Math.random() < 0.25) createPacket('web', 'db', 'sql');
+        } else if (r < 0.9) {
+          createPacket('inet', pick(['web','dns']), 'https');
+        } else {
+          createPacket(pick(['ws1','ws2','ws3','ws4']), 'web', 'http');
+        }
+      }
+    }
+
+    function generateAttackTraffic() {
+      if (state.attack === 'ddos') {
+        const intensity = 2 + Math.floor(state.rate * 0.6);
+        for (let i = 0; i < intensity; i++) {
+          const src = Math.random() < 0.5 ? 'atk' : pick(['inet','ws1','ws2','ws3','ws4']);
+          createPacket(src, 'web', 'mal', { malicious: true, attackType: 'ddos', speed: 0.02 });
+        }
+      } else if (state.attack === 'portscan') {
+        if (state.tick % 6 === 0) {
+          const target = pick(['web','db']);
+          for (let i = 0; i < 2; i++) {
+            state._portCursor = ((state._portCursor || 19) + 1) % 1024;
+            createPacket('atk', target, 'mal', {
+              port: state._portCursor, malicious: true,
+              attackType: 'portscan', speed: 0.024,
+            });
+          }
+        }
+        if (Math.random() < 0.3) generateNormalTraffic();
+      } else if (state.attack === 'mitm') {
+        if (state.tick % 5 === 0) {
+          const ws = pick(['ws1','ws2','ws3','ws4']);
+          createPacket(ws, 'inet', 'http', { malicious: true, attackType: 'mitm', via: 'atk' });
+        }
+        if (Math.random() < 0.5) generateNormalTraffic();
+      } else if (state.attack === 'bruteforce') {
+        if (state.tick % 4 === 0) {
+          createPacket('atk', pick(['ws1','ws2','ws3']), 'mal', {
+            port: 22, malicious: true, attackType: 'brute', speed: 0.022,
+          });
+        }
+        if (Math.random() < 0.5) generateNormalTraffic();
+      } else if (state.attack === 'exfil') {
+        if (state.tick % 8 === 0) {
+          for (let i = 0; i < 2; i++) {
+            createPacket('db', 'atk', 'mal', {
+              malicious: true, attackType: 'exfil',
+              size: 8000 + Math.random() * 4000, speed: 0.016,
+            });
+          }
+        }
+        if (Math.random() < 0.5) generateNormalTraffic();
+      } else if (state.attack === 'ransomware') {
+        if (state.tick % 5 === 0) {
+          const wsList = ['ws1','ws2','ws3','ws4'];
+          const src = pick(wsList);
+          const targets = wsList.filter(w => w !== src);
+          for (const t of targets.slice(0, 2)) {
+            createPacket(src, t, 'mal', { malicious: true, attackType: 'ransomware', speed: 0.018 });
+          }
+          if (Math.random() < 0.3) {
+            createPacket(pick(wsList), pick(['web','db']), 'mal', { malicious: true, attackType: 'ransomware', speed: 0.015 });
+          }
+        }
+        if (Math.random() < 0.3) generateNormalTraffic();
+      } else if (state.attack === 'sqli') {
+        if (state.tick % 4 === 0) {
+          createPacket('atk', 'db', 'mal', {
+            port: 3306, malicious: true, attackType: 'sqli',
+            speed: 0.02, size: 200 + Math.random() * 500,
+          });
+          if (Math.random() < 0.4) {
+            createPacket('inet', 'web', 'mal', {
+              port: 80, malicious: true, attackType: 'sqli', speed: 0.022,
+            });
+          }
+        }
+        if (Math.random() < 0.5) generateNormalTraffic();
+      } else if (state.attack === 'dnstunnel') {
+        if (state.tick % 3 === 0) {
+          const src = pick(['ws1','ws2','ws3','ws4']);
+          createPacket(src, 'dns', 'mal', {
+            port: 53, malicious: true, attackType: 'dnstunnel',
+            speed: 0.025, size: 4000 + Math.random() * 3000,
+          });
+        }
+        if (state.tick % 6 === 0) {
+          createPacket('dns', 'atk', 'mal', {
+            port: 53, malicious: true, attackType: 'dnstunnel',
+            speed: 0.018, size: 6000 + Math.random() * 4000,
+          });
+        }
+        if (Math.random() < 0.5) generateNormalTraffic();
+      }
+    }
+    function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+    // ───── IDS DETECTION ─────
+    const TICKS_PER_SEC = 60;
+    function processPacket(pkt) {
+      const dest = pkt.path[pkt.path.length - 1];
+      const now = state.tick;
+      const winLen = TICKS_PER_SEC * 2; // 2-second sliding window
+
+      let bucket = state.pktBuckets.get(dest);
+      if (!bucket || now - bucket.windowStart > winLen) bucket = { count: 0, windowStart: now };
+      bucket.count++;
+      state.pktBuckets.set(dest, bucket);
+      // Compute packets per second; require at least ~0.5s of data before evaluating
+      const elapsedSec = Math.max(0.5, (now - bucket.windowStart) / TICKS_PER_SEC);
+      const rate = bucket.count / elapsedSec;
+      if (bucket.count >= 8 && rate > state.thresh) {
+        const severity = rate > state.thresh * 3 ? 'critical' : rate > state.thresh * 1.5 ? 'warning' : 'info';
+        fireAlert('rate', dest, severity, `<span class="node">${nodeById(dest).name}</span> rate ${rate.toFixed(0)} pkt/s exceeds threshold ${state.thresh}`);
+      }
+
+      // port scan detection
+      if (pkt.malicious || Math.random() < 0.05) {
+        let ports = state.portWindow.get(dest) || [];
+        ports.push(pkt.port);
+        if (ports.length > 25) ports = ports.slice(-25);
+        state.portWindow.set(dest, ports);
+        // sequential pattern
+        if (ports.length >= 5) {
+          const last5 = ports.slice(-5);
+          let isSeq = true;
+          for (let i = 1; i < last5.length; i++) {
+            if (last5[i] !== last5[i-1] + 1) { isSeq = false; break; }
+          }
+          if (isSeq) {
+            fireAlert('portscan', dest, 'warning',
+              `Sequential ports detected on <span class="node">${nodeById(dest).name}</span> (${last5[0]}→${last5[last5.length-1]})`);
+          }
+          const unique = new Set(ports.slice(-12)).size;
+          if (unique >= 9) {
+            fireAlert('portscan', dest, 'warning',
+              `Port diversity anomaly on <span class="node">${nodeById(dest).name}</span> (${unique} unique ports / 12 packets)`);
+          }
+        }
+      }
+
+      // MITM detection: path includes attacker
+      if (pkt.path.includes('atk') && pkt.attackType === 'mitm') {
+        fireAlert('mitm', dest, 'critical',
+          `Routing anomaly: ${nodeById(pkt.path[0]).name} → ${nodeById(dest).name} traverses unauthorized hop ATTACKER`);
+      }
+
+      // Brute force: SSH protocol concentration over ~3s
+      if (pkt.port === 22) {
+        const k = 'ssh-' + dest;
+        const e = state.protoConcentration.get(k) || { count: 0, ts: now };
+        if (now - e.ts > TICKS_PER_SEC * 3) { e.count = 0; e.ts = now; }
+        e.count++;
+        state.protoConcentration.set(k, e);
+        if (e.count >= 5) {
+          fireAlert('brute', dest, 'critical',
+            `Brute-force pattern: ${e.count} SSH attempts on <span class="node">${nodeById(dest).name}</span> in 3s window`);
+          e.count = 0;
+        }
+      }
+
+      // Exfil: large outbound from internal nodes over ~3s
+      if (nodeById(pkt.path[0]).role === 'server' && (dest === 'atk' || dest === 'inet') && pkt.size > 5000) {
+        const k = 'exf-' + pkt.path[0];
+        const e = state.egressBuckets.get(k) || { bytes: 0, ts: now };
+        if (now - e.ts > TICKS_PER_SEC * 3) { e.bytes = 0; e.ts = now; }
+        e.bytes += pkt.size;
+        state.egressBuckets.set(k, e);
+        if (e.bytes > 20000) {
+          fireAlert('exfil', pkt.path[0], 'critical',
+            `Data exfiltration: ${(e.bytes/1024).toFixed(1)} KB egress from <span class="node">${nodeById(pkt.path[0]).name}</span>`);
+          e.bytes = 0;
+        }
+      }
+
+      // Ransomware: lateral movement — client→client or client→server mal traffic
+      if (pkt.attackType === 'ransomware') {
+        const srcNode = nodeById(pkt.path[0]);
+        const dstNode = nodeById(dest);
+        if (srcNode && dstNode && (srcNode.role === 'client' || srcNode.role === 'server')) {
+          const k = 'ransom-' + dest;
+          const e = state.protoConcentration.get(k) || { count: 0, ts: now };
+          if (now - e.ts > TICKS_PER_SEC * 3) { e.count = 0; e.ts = now; }
+          e.count++;
+          state.protoConcentration.set(k, e);
+          if (e.count >= 3) {
+            fireAlert('ransomware', dest, 'critical',
+              `Ransomware lateral movement: ${e.count} malicious payloads reached <span class="node">${dstNode.name}</span> from internal hosts`);
+            e.count = 0;
+          }
+        }
+      }
+
+      // SQL Injection: external SQL traffic to DB
+      if (pkt.attackType === 'sqli' && pkt.port === 3306) {
+        const k = 'sqli-' + dest;
+        const e = state.protoConcentration.get(k) || { count: 0, ts: now };
+        if (now - e.ts > TICKS_PER_SEC * 3) { e.count = 0; e.ts = now; }
+        e.count++;
+        state.protoConcentration.set(k, e);
+        if (e.count >= 4) {
+          fireAlert('sqli', dest, 'critical',
+            `SQL injection pattern: ${e.count} suspicious queries targeting <span class="node">${nodeById(dest).name}</span> port 3306`);
+          e.count = 0;
+        }
+      }
+
+      // DNS Tunneling: abnormal DNS volume and large packet sizes
+      if (pkt.attackType === 'dnstunnel' && pkt.port === 53) {
+        const k = 'dnst-' + dest;
+        const e = state.egressBuckets.get(k) || { bytes: 0, ts: now, count: 0 };
+        if (now - e.ts > TICKS_PER_SEC * 3) { e.bytes = 0; e.count = 0; e.ts = now; }
+        e.bytes += pkt.size;
+        e.count++;
+        state.egressBuckets.set(k, e);
+        if (e.bytes > 15000 || e.count >= 6) {
+          fireAlert('dnstunnel', dest, 'critical',
+            `DNS tunneling: ${(e.bytes/1024).toFixed(1)} KB in ${e.count} oversized DNS packets to <span class="node">${nodeById(dest).name}</span>`);
+          e.bytes = 0; e.count = 0;
+        }
+      }
+    }
+
+    function fireAlert(type, nodeId, severity, msg) {
+      const key = type + ':' + nodeId;
+      const now = performance.now();
+      const last = state.dedup.get(key);
+      if (last && now - last < 2000) return;
+      state.dedup.set(key, now);
+      const alert = {
+        type, nodeId, severity, msg,
+        time: new Date().toLocaleTimeString(),
+      };
+      state.alerts.push(alert);
+      if (state.alerts.length > 150) state.alerts.shift();
+      state.alertCounts[type] = (state.alertCounts[type] || 0) + 1;
+      // health decay
+      if (severity === 'critical') state.health = Math.max(0, state.health - 5);
+      else if (severity === 'warning') state.health = Math.max(0, state.health - 1);
+      // node pulse
+      state.nodeAlerts.set(nodeId, performance.now());
+      renderAlertFeed();
+      updateMetrics();
+    }
+
+    // ───── UPDATE LOOP ─────
+    let lastFrame = performance.now();
+    let frameCount = 0;
+    let pktThisTick = 0;
+    function tick() {
+      if (!state.paused) {
+        state.tick++;
+        pktThisTick = 0;
+        // Generate traffic
+        if (state.attack === 'normal') {
+          generateNormalTraffic();
+          state.health = Math.min(100, state.health + 0.4);
+        } else {
+          generateAttackTraffic();
+        }
+        // Advance packets
+        const survivors = [];
+        for (const p of state.packets) {
+          p.segT += p.speed;
+          while (p.segT >= 1 && p.segIdx < p.path.length - 2) {
+            p.segIdx++;
+            p.segT -= 1;
+          }
+          if (p.segIdx >= p.path.length - 1 || (p.segIdx === p.path.length - 2 && p.segT >= 1)) {
+            // arrived
+            processPacket(p);
+            pktThisTick++;
+          } else {
+            survivors.push(p);
+          }
+        }
+        // Cap packet count for performance
+        state.packets = survivors.slice(-400);
+
+        // history shift
+        state.pktHistory.push(pktThisTick);
+        if (state.pktHistory.length > 60) state.pktHistory.shift();
+
+        // attacker visibility
+        const attackActive = state.attack !== 'normal';
+        if (attackActive && !state.attackerVisible) state.attackerVisible = true;
+        if (!attackActive && state.attackerVisible) {
+          // fade out after no activity
+          if (state.packets.filter(p => p.path.includes('atk')).length === 0) state.attackerVisible = false;
+        }
+        state.attackerPulse += 0.06;
+      }
+      // Render
+      render();
+      updateLiveBadges(pktThisTick);
+      // FPS
+      const now = performance.now();
+      frameCount++;
+      if (now - lastFrame > 500) {
+        document.getElementById('fps').textContent = Math.round(frameCount * 1000 / (now - lastFrame));
+        frameCount = 0; lastFrame = now;
+      }
+      requestAnimationFrame(tick);
+    }
+
+    // ───── RENDER ─────
+    function render() {
+      // background
+      ctx.fillStyle = '#0a0c1a';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // subtle grid
+      ctx.strokeStyle = 'rgba(40,46,90,0.25)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < canvas.width; x += 40) {
+        ctx.beginPath(); ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, canvas.height); ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += 40) {
+        ctx.beginPath(); ctx.moveTo(0, y + 0.5); ctx.lineTo(canvas.width, y + 0.5); ctx.stroke();
+      }
+
+      // Draw links
+      ctx.strokeStyle = 'rgba(0,229,255,0.18)';
+      ctx.lineWidth = 1.5;
+      for (const [a, b] of LINKS) {
+        const A = nodeById(a), B = nodeById(b);
+        ctx.beginPath();
+        ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y);
+        ctx.stroke();
+      }
+      // Attacker links (when visible)
+      if (state.attackerVisible) {
+        ctx.strokeStyle = 'rgba(255,23,68,0.35)';
+        ctx.setLineDash([4, 6]);
+        ctx.beginPath();
+        // attacker connects to internet
+        ctx.moveTo(ATTACKER.x, ATTACKER.y);
+        ctx.lineTo(nodeById('inet').x, nodeById('inet').y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      // Packets — batched: trails first (cheap), then cores (no shadow), then malicious cores (with shadow)
+      const malicious = [];
+      ctx.shadowBlur = 0;
+      for (const p of state.packets) {
+        const a = nodeById(p.path[p.segIdx]);
+        const b = nodeById(p.path[p.segIdx + 1]);
+        if (!a || !b) continue;
+        p._x = a.x + (b.x - a.x) * p.segT;
+        p._y = a.y + (b.y - a.y) * p.segT;
+        const color = PROTO[p.proto].color;
+        ctx.fillStyle = color + '40';
+        ctx.beginPath();
+        ctx.arc(p._x, p._y, p.malicious ? 6 : 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(p._x, p._y, p.malicious ? 3 : 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        if (p.malicious) malicious.push(p);
+      }
+      // Glow pass only for malicious packets (rare in normal mode)
+      if (malicious.length) {
+        ctx.shadowColor = '#ff1744';
+        ctx.shadowBlur = 12;
+        ctx.fillStyle = '#ff1744';
+        for (const p of malicious) {
+          ctx.beginPath();
+          ctx.arc(p._x, p._y, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.shadowBlur = 0;
+      }
+
+      // Nodes
+      for (const n of NODES) drawNode(n);
+      if (state.attackerVisible) drawNode(ATTACKER);
+    }
+
+    function drawNode(n) {
+      const isAttacker = n.id === 'atk';
+      const isAlerted = state.nodeAlerts.has(n.id) && (performance.now() - state.nodeAlerts.get(n.id) < 1500);
+      const r = isAttacker ? 28 : (n.role === 'edge' || n.role === 'security' || n.role === 'router' ? 26 : 22);
+      // base
+      const accent = isAttacker ? '#ff1744' : (n.role === 'server' ? '#00e5ff' : n.role === 'client' ? '#b388ff' : '#ffab00');
+      // halo
+      const halo = isAlerted ? 'rgba(255,23,68,0.5)' : (isAttacker ? 'rgba(255,23,68,0.3)' : 'rgba(0,229,255,0.15)');
+      const pulse = isAlerted ? (1 + 0.3 * Math.sin(state.tick * 0.4)) : 1;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, r * 1.2 * pulse, 0, Math.PI * 2);
+      ctx.fillStyle = halo;
+      ctx.fill();
+      // body
+      const grd = ctx.createRadialGradient(n.x - r/3, n.y - r/3, 1, n.x, n.y, r);
+      grd.addColorStop(0, lighten(accent, 0.3));
+      grd.addColorStop(0.6, accent);
+      grd.addColorStop(1, darken(accent, 0.5));
+      ctx.fillStyle = grd;
+      ctx.shadowColor = accent;
+      ctx.shadowBlur = isAlerted ? 18 : 10;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      // inner ring
+      ctx.strokeStyle = '#0a0c1a';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, r * 0.7, 0, Math.PI * 2);
+      ctx.stroke();
+      // icon
+      drawNodeIcon(n, r);
+      // label
+      ctx.fillStyle = '#e7eaff';
+      ctx.font = '11px JetBrains Mono';
+      ctx.textAlign = 'center';
+      ctx.fillText(n.name, n.x, n.y + r + 16);
+      ctx.fillStyle = '#8a92c2';
+      ctx.font = '9px JetBrains Mono';
+      ctx.fillText(n.type.toUpperCase(), n.x, n.y + r + 28);
+    }
+
+    function drawNodeIcon(n, r) {
+      ctx.save();
+      ctx.translate(n.x, n.y);
+      ctx.strokeStyle = '#0a0c1a';
+      ctx.fillStyle = '#0a0c1a';
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      const s = r * 0.4;
+      if (n.type === 'cloud') {
+        ctx.beginPath();
+        ctx.arc(-s*0.4, 0, s*0.5, 0, Math.PI * 2);
+        ctx.arc(s*0.2, -s*0.2, s*0.55, 0, Math.PI * 2);
+        ctx.arc(s*0.5, s*0.2, s*0.4, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (n.type === 'shield') {
+        ctx.beginPath();
+        ctx.moveTo(0, -s); ctx.lineTo(s, -s*0.5); ctx.lineTo(s*0.7, s*0.8);
+        ctx.lineTo(0, s); ctx.lineTo(-s*0.7, s*0.8); ctx.lineTo(-s, -s*0.5);
+        ctx.closePath();
+        ctx.fill();
+      } else if (n.type === 'router') {
+        ctx.beginPath();
+        ctx.moveTo(-s, 0); ctx.lineTo(0, -s); ctx.lineTo(s, 0); ctx.lineTo(0, s); ctx.closePath();
+        ctx.fill();
+      } else if (n.type === 'server') {
+        ctx.fillRect(-s*0.8, -s*0.7, s*1.6, s*0.5);
+        ctx.fillRect(-s*0.8, -s*0.05, s*1.6, s*0.5);
+        ctx.fillRect(-s*0.8, s*0.6, s*1.6, s*0.2);
+      } else if (n.type === 'workstation') {
+        ctx.fillRect(-s*0.9, -s*0.7, s*1.8, s*1.1);
+        ctx.fillRect(-s*0.3, s*0.5, s*0.6, s*0.3);
+      } else if (n.type === 'skull') {
+        // skull: oval head + jaw
+        ctx.beginPath();
+        ctx.ellipse(0, -s*0.1, s*0.85, s*0.9, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // eyes
+        ctx.fillStyle = '#ff1744';
+        ctx.beginPath();
+        ctx.arc(-s*0.35, -s*0.1, s*0.18, 0, Math.PI * 2);
+        ctx.arc(s*0.35, -s*0.1, s*0.18, 0, Math.PI * 2);
+        ctx.fill();
+        // jaw
+        ctx.fillStyle = '#0a0c1a';
+        ctx.fillRect(-s*0.5, s*0.45, s, s*0.3);
+      }
+      ctx.restore();
+    }
+
+    function lighten(hex, amt) {
+      // simple lighten
+      const c = parseInt(hex.slice(1), 16);
+      let r = (c >> 16) + Math.round(255 * amt);
+      let g = ((c >> 8) & 255) + Math.round(255 * amt);
+      let b = (c & 255) + Math.round(255 * amt);
+      r = Math.min(255, r); g = Math.min(255, g); b = Math.min(255, b);
+      return `rgb(${r},${g},${b})`;
+    }
+    function darken(hex, amt) {
+      const c = parseInt(hex.slice(1), 16);
+      let r = Math.max(0, (c >> 16) - Math.round(255 * amt));
+      let g = Math.max(0, ((c >> 8) & 255) - Math.round(255 * amt));
+      let b = Math.max(0, (c & 255) - Math.round(255 * amt));
+      return `rgb(${r},${g},${b})`;
+    }
+
+    // ───── METRICS ─────
+    function updateMetrics() {
+      document.getElementById('alertCount').textContent = state.alerts.length;
+      const crit = state.alerts.filter(a => a.severity === 'critical').length;
+      document.getElementById('critCount').textContent = crit;
+      document.getElementById('alertSummary').textContent =
+        `R:${state.alertCounts.rate||0} PS:${state.alertCounts.portscan||0} M:${state.alertCounts.mitm||0} B:${state.alertCounts.brute||0} X:${state.alertCounts.exfil||0} RW:${state.alertCounts.ransomware||0} SQ:${state.alertCounts.sqli||0} DN:${state.alertCounts.dnstunnel||0}`;
+      // health
+      const h = Math.round(state.health);
+      const hv = document.getElementById('healthVal');
+      hv.textContent = h;
+      hv.className = 'health-value' + (h < 30 ? ' critical' : h < 70 ? ' warning' : '');
+      document.getElementById('healthBar').style.width = h + '%';
+      // network status
+      const dot = document.getElementById('netDot');
+      const status = document.getElementById('netStatus');
+      if (h < 30) { dot.className = 'status-dot red'; status.textContent = 'CRITICAL'; status.style.color = 'var(--red)'; }
+      else if (h < 70) { dot.className = 'status-dot amber'; status.textContent = 'DEGRADED'; status.style.color = 'var(--amber)'; }
+      else { dot.className = 'status-dot'; status.textContent = 'SECURE'; status.style.color = 'var(--green)'; }
+      // attack mode badge
+      const am = document.getElementById('attackMode');
+      am.textContent = state.attack.toUpperCase();
+      am.style.color = state.attack === 'normal' ? 'var(--green)' : 'var(--red)';
+    }
+
+    function updateLiveBadges(pktNow) {
+      document.getElementById('pktRate').textContent = pktNow;
+      document.getElementById('pktNow').textContent = pktNow;
+      // uptime
+      const elapsed = Math.floor((performance.now() - state.startTime) / 1000);
+      document.getElementById('uptime').textContent =
+        String(Math.floor(elapsed/60)).padStart(2,'0') + ':' + String(elapsed%60).padStart(2,'0');
+      // charts
+      drawPktChart();
+      drawAlertChart();
+    }
+
+    // ───── CHARTS ─────
+    const pktCtx = document.getElementById('pktChart').getContext('2d');
+    function drawPktChart() {
+      const c = pktCtx, w = c.canvas.width, h = c.canvas.height;
+      c.clearRect(0, 0, w, h);
+      const data = state.pktHistory;
+      const max = Math.max(10, ...data);
+      // area
+      c.beginPath();
+      c.moveTo(0, h);
+      for (let i = 0; i < data.length; i++) {
+        const x = (i / (data.length - 1)) * w;
+        const y = h - (data[i] / max) * (h - 4);
+        c.lineTo(x, y);
+      }
+      c.lineTo(w, h); c.closePath();
+      const grd = c.createLinearGradient(0, 0, 0, h);
+      grd.addColorStop(0, 'rgba(0,229,255,0.55)');
+      grd.addColorStop(1, 'rgba(0,229,255,0.0)');
+      c.fillStyle = grd;
+      c.fill();
+      // line
+      c.beginPath();
+      for (let i = 0; i < data.length; i++) {
+        const x = (i / (data.length - 1)) * w;
+        const y = h - (data[i] / max) * (h - 4);
+        if (i === 0) c.moveTo(x, y); else c.lineTo(x, y);
+      }
+      c.strokeStyle = '#00e5ff';
+      c.lineWidth = 1.5;
+      c.stroke();
+    }
+
+    const alertCtx = document.getElementById('alertChart').getContext('2d');
+    function drawAlertChart() {
+      const c = alertCtx, w = c.canvas.width, h = c.canvas.height;
+      c.clearRect(0, 0, w, h);
+      const types = ['rate','portscan','mitm','brute','exfil','ransomware','sqli','dnstunnel'];
+      const colors = ['#00e5ff','#ffab00','#ff1744','#b388ff','#ff80ab','#e040fb','#76ff03','#18ffff'];
+      const counts = types.map(t => state.alertCounts[t] || 0);
+      const max = Math.max(1, ...counts);
+      const barW = w / types.length;
+      types.forEach((t, i) => {
+        const v = counts[i];
+        const bh = (v / max) * (h - 18);
+        c.fillStyle = colors[i];
+        c.shadowColor = colors[i]; c.shadowBlur = 4;
+        c.fillRect(i * barW + 4, h - bh - 14, barW - 8, bh);
+        c.shadowBlur = 0;
+        c.fillStyle = '#8a92c2';
+        c.font = '9px JetBrains Mono';
+        c.textAlign = 'center';
+        c.fillText(t.slice(0, 4).toUpperCase(), i * barW + barW/2, h - 3);
+        c.fillStyle = '#e7eaff';
+        c.fillText(String(v), i * barW + barW/2, h - bh - 16);
+      });
+    }
+
+    // ───── ALERT FEED ─────
+    function renderAlertFeed() {
+      const feed = document.getElementById('alertFeed');
+      if (!state.alerts.length) {
+        feed.className = 'alert-feed empty';
+        feed.innerHTML = '<div>No alerts yet · IDS armed and watching</div>';
+        return;
+      }
+      feed.className = 'alert-feed';
+      // show last 40
+      const items = state.alerts.slice(-40).reverse();
+      feed.innerHTML = items.map(a => `
+        <div class="alert ${a.severity}">
+          <div class="alert-head">
+            <span class="alert-type">${a.type.toUpperCase()}</span>
+            <span class="alert-time">${a.time}</span>
+          </div>
+          <div class="alert-msg">${a.msg}</div>
+        </div>
+      `).join('');
+    }
+
+    // ───── ANALYST ─────
+    function runAnalyst() {
+      const parts = [];
+      const totalAlerts = state.alerts.length;
+      const crit = state.alerts.filter(a => a.severity === 'critical').length;
+      const counts = state.alertCounts;
+
+      parts.push(`<strong>NETWORK STATE:</strong> Health <em>${Math.round(state.health)}%</em>. ${totalAlerts} total alerts (${crit} critical) over ${Math.floor((performance.now()-state.startTime)/1000)}s of monitoring.`);
+
+      if (state.attack === 'normal' && totalAlerts === 0) {
+        parts.push(`<strong>ASSESSMENT:</strong> Baseline traffic is flowing nominally between workstations and servers. No anomalies detected. Health regenerating at +0.4/tick.`);
+      } else {
+        // Top alert types
+        const sorted = Object.entries(counts).filter(([,v]) => v > 0).sort((a,b) => b[1] - a[1]);
+        if (sorted.length) {
+          const top = sorted[0];
+          const tName = { rate: 'Rate-based (DDoS-like)', portscan: 'Port scanning', mitm: 'MITM hijack', brute: 'Brute-force auth', exfil: 'Data exfiltration', ransomware: 'Ransomware lateral movement', sqli: 'SQL injection', dnstunnel: 'DNS tunneling' }[top[0]];
+          parts.push(`<strong>DOMINANT THREAT:</strong> <em>${tName}</em> with ${top[1]} alerts. ${describeMitigation(top[0])}`);
+        }
+        if (state.attack === 'ddos') {
+          parts.push(`<strong>DDoS SIGNATURE:</strong> The web server is absorbing a high-volume packet flood. Rate-based detection has tripped due to packets/sec exceeding the configured threshold of ${state.thresh}. Recommended mitigation: <em>rate limiting at firewall + upstream scrubbing service</em>.`);
+        } else if (state.attack === 'portscan') {
+          parts.push(`<strong>RECON SIGNATURE:</strong> Sequential destination ports indicate enumeration. Attacker is mapping open services. Recommended mitigation: <em>port-knocking, fail2ban-style auto-blocklist, restrict ICMP responses</em>.`);
+        } else if (state.attack === 'mitm') {
+          parts.push(`<strong>MITM SIGNATURE:</strong> Workstation→Internet traffic is being silently routed through an unauthorized hop. Recommended mitigation: <em>enforce HTTPS/TLS pinning, deploy ARP-spoofing detection, network segmentation</em>.`);
+        } else if (state.attack === 'bruteforce') {
+          parts.push(`<strong>AUTH ATTACK SIGNATURE:</strong> Repeated SSH attempts concentrated on a workstation. Recommended mitigation: <em>fail2ban, key-only auth, rate-limit failed attempts, MFA</em>.`);
+        } else if (state.attack === 'exfil') {
+          parts.push(`<strong>EXFIL SIGNATURE:</strong> Anomalously large outbound transfers originating at the database server. Recommended mitigation: <em>egress filtering, DLP rules on DB connections, alert on bytes-per-session anomalies</em>.`);
+        } else if (state.attack === 'ransomware') {
+          parts.push(`<strong>RANSOMWARE SIGNATURE:</strong> Lateral movement detected — malicious payloads spreading between workstations and servers. This mimics real ransomware like WannaCry/NotPetya. Recommended mitigation: <em>network segmentation, endpoint detection & response (EDR), disable SMB v1, micro-segmentation between workstations</em>.`);
+        } else if (state.attack === 'sqli') {
+          parts.push(`<strong>SQLi SIGNATURE:</strong> Malicious SQL queries targeting the database server from external sources. Classic injection attack pattern. Recommended mitigation: <em>WAF with SQL injection rules, parameterized queries, input validation, DB access control lists, query rate limiting</em>.`);
+        } else if (state.attack === 'dnstunnel') {
+          parts.push(`<strong>DNS TUNNEL SIGNATURE:</strong> Abnormally large and frequent DNS queries indicate covert data channel. Attackers encode stolen data in DNS packets to bypass firewalls. Recommended mitigation: <em>DNS query logging + anomaly detection, restrict DNS to approved resolvers, block TXT/NULL record types, DNS payload size limits</em>.`);
+        }
+      }
+
+      const verdict = state.health < 30 ? `<div class="verdict">VERDICT: <span class="crit">NETWORK COMPROMISED</span> — immediate containment required.</div>`
+        : state.health < 70 ? `<div class="verdict">VERDICT: <span style="color:var(--amber);font-weight:700">DEGRADED</span> — investigate top threats and apply mitigations.</div>`
+        : `<div class="verdict">VERDICT: <span class="ok">SECURE</span> — IDS effective, perimeter holding.</div>`;
+      parts.push(verdict);
+      document.getElementById('analyst').innerHTML = parts.join(' ');
+    }
+
+    function describeMitigation(type) {
+      const map = {
+        rate: 'Apply rate-limiting and consider an upstream scrubbing service.',
+        portscan: 'Enable adaptive firewall blocklist; reduce surface area of exposed services.',
+        mitm: 'Enforce TLS pinning and network segmentation.',
+        brute: 'Enable fail2ban, switch to key-only SSH, require MFA.',
+        exfil: 'Apply DLP egress filtering on sensitive data sources.',
+        ransomware: 'Deploy EDR, segment network, disable unnecessary lateral protocols.',
+        sqli: 'Deploy WAF, enforce parameterized queries, restrict DB access.',
+        dnstunnel: 'Monitor DNS payload sizes, restrict to approved resolvers.',
+      };
+      return map[type] || '';
+    }
+
+    // ───── EVENTS ─────
+    document.querySelectorAll('.attack-btn').forEach(b => {
+      b.addEventListener('click', () => {
+        document.querySelectorAll('.attack-btn').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        state.attack = b.dataset.attack;
+        toast(`Attack mode: ${state.attack.toUpperCase()}`, state.attack === 'normal' ? '' : 'red');
+      });
+    });
+    document.getElementById('rate').addEventListener('input', e => {
+      state.rate = +e.target.value;
+      document.getElementById('rateVal').textContent = state.rate;
+    });
+    document.getElementById('thresh').addEventListener('input', e => {
+      state.thresh = +e.target.value;
+      document.getElementById('threshVal').textContent = state.thresh;
+    });
+    const pauseBtn = document.getElementById('pauseBtn');
+    pauseBtn.addEventListener('click', () => {
+      state.paused = !state.paused;
+      pauseBtn.innerHTML = state.paused
+        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>Resume'
+        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>Pause';
+      document.getElementById('state').textContent = state.paused ? 'PAUSED' : 'MONITORING';
+      document.getElementById('state').style.color = state.paused ? 'var(--amber)' : 'var(--green)';
+    });
+    document.getElementById('analystBtn').addEventListener('click', runAnalyst);
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      state.alerts = [];
+      state.alertCounts = { rate: 0, portscan: 0, mitm: 0, brute: 0, exfil: 0, ransomware: 0, sqli: 0, dnstunnel: 0 };
+      state.health = 100;
+      renderAlertFeed();
+      updateMetrics();
+      toast('Alerts cleared · Health restored');
+    });
+
+    const infoModal = document.getElementById('infoModal');
+    document.getElementById('infoBtn').addEventListener('click', () => infoModal.classList.add('active'));
+    document.getElementById('modalClose').addEventListener('click', () => infoModal.classList.remove('active'));
+    infoModal.addEventListener('click', (e) => { if (e.target === infoModal) infoModal.classList.remove('active'); });
+
+    function toast(msg, kind = '') {
+      const t = document.createElement('div');
+      t.className = 'toast' + (kind ? ' ' + kind : '');
+      t.textContent = msg;
+      document.getElementById('toasts').appendChild(t);
+      setTimeout(() => t.remove(), 3200);
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      const k = e.key.toLowerCase();
+      const map = { '1':'normal','2':'ddos','3':'portscan','4':'mitm','5':'bruteforce','6':'exfil','7':'ransomware','8':'sqli','9':'dnstunnel' };
+      if (map[e.key]) document.querySelector(`[data-attack="${map[e.key]}"]`).click();
+      else if (e.key === ' ') { e.preventDefault(); pauseBtn.click(); }
+      else if (k === 'a') runAnalyst();
+      else if (k === 'c') document.getElementById('clearBtn').click();
+      else if (k === 'i') infoModal.classList.toggle('active');
+      else if (e.key === 'Escape') infoModal.classList.remove('active');
+    });
+
+    // ───── INTRO FADE ─────
+    setTimeout(() => {
+      document.getElementById('intro').classList.add('fade');
+      setTimeout(() => document.getElementById('intro').remove(), 1000);
+      if (!localStorage.getItem('cybershield_seen')) {
+        setTimeout(() => infoModal.classList.add('active'), 600);
+        localStorage.setItem('cybershield_seen', '1');
+      }
+    }, 1500);
+
+    // ───── START ─────
+    updateMetrics();
+    requestAnimationFrame(tick);
+    console.log('%c CYBERSHIELD v3.0 ', 'background:#ff1744;color:#0a0c1a;font-weight:bold;padding:4px 8px;');
+    console.log('Built with vanilla JS · Zero dependencies · 8 IDS algorithms from scratch');
+  })();
+  </script>
+</body>
+</html>
